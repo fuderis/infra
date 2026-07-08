@@ -4,7 +4,7 @@
 set -o pipefail
 
 # Configuration
-INSTALL_DIR="$HOME/.infra"
+INSTALL_DIR="/opt/infra"
 LOCAL_BIN_DIR="$HOME/.local/bin"
 BINARY_NAME="infra"
 
@@ -34,20 +34,20 @@ else
 fi
 
 # 3. Prepare target filesystem nodes
-mkdir -p "$INSTALL_DIR/bin"
+mkdir -p "$INSTALL_DIR"
 mkdir -p "$LOCAL_BIN_DIR"
 
 # 4. Deploy release payload
 echo -e "${BLUE}==>${NC} ${BOLD}Deploying binary...${NC}"
-cp target/release/infra "$INSTALL_DIR/bin/$BINARY_NAME"
+cp target/release/infra "$INSTALL_DIR/$BINARY_NAME"
 
 # 5. Handle symlink routing redirection
-ln -sf "$INSTALL_DIR/bin/$BINARY_NAME" "$LOCAL_BIN_DIR/$BINARY_NAME"
+ln -sf "$INSTALL_DIR/$BINARY_NAME" "$LOCAL_BIN_DIR/$BINARY_NAME"
 
 # Truncate raw absolute $HOME paths to structural ~ representation for logs
-PRINT_SRC=$(echo "$INSTALL_DIR/bin/$BINARY_NAME" | sed "s|$HOME|~|g")
+PRINT_SRC=$(echo "$INSTALL_DIR/$BINARY_NAME" | sed "s|$HOME|~|g")
 PRINT_DST=$(echo "$LOCAL_BIN_DIR/$BINARY_NAME" | sed "s|$HOME|~|g")
-echo -e " ${GREEN}->${NC} Symlink created: ${BOLD}$PRINT_SRC${NC} ${GREEN}->${NC} ${BOLD}$PRINT_DST${NC}"
+echo -e " ${GREEN}->${NC} Symlink created: ${BLUE}$PRINT_SRC${NC} ${GREEN}->${NC} ${BLUE}$PRINT_DST${NC}"
 
 # 6. Verify environment variable array metrics
 echo -e "${BLUE}==>${NC} ${BOLD}Checking environment PATH...${NC}"
