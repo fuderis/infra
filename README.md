@@ -95,6 +95,7 @@ infra -t admin sync helix
 
 # Sync absolutely all configuration blocks defined in settings.toml
 infra -t admin sync @
+```
 
 ## Infra Configuration
 
@@ -102,6 +103,7 @@ On initialization, the utility looks for its configuration blueprint at the foll
 `~/.config/infra/settings.toml`
 
 Configuration profile by default (change to your own):
+
 ```toml
 [remote]
 default = "root"
