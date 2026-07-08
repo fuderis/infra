@@ -13,7 +13,7 @@ use prelude::*;
 #[derive(Parser, Debug)]
 #[command(
     name = "infra",
-    version = "0.1.1",
+    version = "0.1.2",
     about = "Remote Infrastructure Orchestrator"
 )]
 pub struct Cli {
@@ -44,6 +44,10 @@ pub enum Commands {
         /// Allow remote hosts to connect to local forwarded ports
         #[arg(short, long, global = false)]
         gateway: bool,
+
+        /// Specifying the port for the SSH tunnel (1080 by default)
+        #[arg(short, long, global = false)]
+        port: Option<u16>,
     },
 
     //         NETWORK
@@ -129,9 +133,11 @@ async fn main() -> Result<()> {
     if let Err(e) = match cli.command {
         Commands::List => cmds::ssh::handle_list().await,
         Commands::Connect => cmds::ssh::handle_connect(&cli.target).await,
-        Commands::Tunnel { action, gateway } => {
-            cmds::ssh::handle_tunnel(&cli.target, action, gateway).await
-        }
+        Commands::Tunnel {
+            action,
+            gateway,
+            port,
+        } => cmds::ssh::handle_tunnel(&cli.target, action, gateway, port).await,
 
         Commands::Setup => cmds::system::handle_setup(&cli.target).await,
         Commands::Usage => cmds::system::handle_usage(&cli.target).await,

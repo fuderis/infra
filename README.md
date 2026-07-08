@@ -33,11 +33,13 @@ Handles interactive login sessions and background network proxy streams.
 
 * `infra list` — Lists all infrastructure hosts configured in `settings.toml`.
 * `infra [-t TARGET] connect` — Spawns a native, interactive SSH terminal session to the target host.
-* `infra [-t TARGET] tunnel <ACTION>` — Manages a persistent background SOCKS5 SSH tunnel bound to local port `1080`.
+* `infra [-t TARGET] tunnel [-p PORT] <ACTION>` — Manages a persistent background SOCKS5 SSH tunnel bound to local port (`1080` by default).
   * `start` — Launches the background monitoring watchdog within an isolated process group (`setsid`).
   * `stop` — Safely tears down the entire process group session and flushes the PID lockfile.
   * `restart` — Cycles the active network proxy daemon offline and online.
   * `status` — Inspects the process tree for running `bash`/`ssh` tunnel instances.
+
+ > The flag `-g` | `--gateway` allows you to start a tunnel for all devices on the local network.
 
 ### 2. NETWORK Module (`cmds::net`)
 Performs rapid network health checks and path discovery to the remote machine.
