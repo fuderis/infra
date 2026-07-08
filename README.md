@@ -8,11 +8,17 @@ It provides a structured, predictable alternative to complex shell scripts by ha
 
 ## Key Features
 
-* **Asynchronous Core:** Written in Rust using `tokio` for lightning-fast concurrent operations.
-* **User Management:** Shell-agnostic account provisioning, seamless `sudo` group mutations, and fully automated SSH key lifecycle management.
+* **Concurrent Process Execution:** Executes remote commands, network audits, and file transfers concurrently without blocking the local user interface.
+* **Deterministic Configuration Syncing:** Automatically strips local `$HOME` path prefixes, ensures idempotent remote directory structure generation (`mkdir -p`) via SSH,
+  and streams updates using `rsync` over SSH.
 * **Out-of-the-Box Security:** Instant network socket inventory, active firewall inspection, brute-force detection,
   and automated baseline hardening (SSH & Fail2Ban configuration).
-* **Smart SSH Tunneling:** Persistent SOCKS5 proxy management with zombie process isolation and built-in watchdog auto-recovery loops.
+* **Stateful SSH Tunneling:** Manages persistent SOCKS5 proxy daemons inside isolated process groups (`setsid`).
+  Includes runtime checks (`fuser` and process mapping) to prevent zombie processes, PID collisions, and port binding failures.
+* **Automated User & Key Lifecycle:** Standardizes remote unprivileged account provisioning, cryptographic `ed25519` keypair generation using temporary memory-mapped paths (`/tmp`),
+  remote authorization injection, and precise permission enforcement (`chmod 700/600`).
+* **Passive Host Inspections:** Aggregates remote system statistics by parsing low-overhead runtime counters, `ss` network socket tables, active firewall states,
+  and active interactive terminal sessions.
 
 ## Command Architecture & Usage
 
@@ -53,19 +59,19 @@ Automates host configurations and evaluates threat posture (Debian/Ubuntu specif
 Provides an end-to-end suite for remote user account lifecycle mutations.
 
 ```bash
-infra [-t TARGET] user <ACTION>
+infra [-t TARGET] user <-u USER_NAME> <ACTION>
 ```
 
 User Actions: 
-* `new --username <NAME>` — Provisions a new unprivileged system user with a default `/bin/bash` shell environment and strictly isolated permissions.
-* `grant-sudo --username <NAME>` — Appends the targeted account to the secondary administrative `sudo` group.
-* `status --username <NAME>` — Audits structural configuration matrices and maps interactive login history for a specific user.
-* `remove --username <NAME>` — Destroys a user identity along with all attached files and home folders.
+* `new` — Provisions a new unprivileged system user with a default `/bin/bash` shell environment and strictly isolated permissions.
+* `grant-sudo` — Appends the targeted account to the secondary administrative `sudo` group.
+* `status` — Audits structural configuration matrices and maps interactive login history for a specific user.
+* `remove` — Destroys a user identity along with all attached files and home folders.
 * `key <KEY_OP>` — Routes specific cryptographic key mutations:
-  * `user gen --username <NAME> --output-file <PATH>` — Allocates an isolated staging directory in local RAM,
+  * `user gen [--output-file <PATH>]` — Allocates an isolated staging directory in local RAM,
     triggers an `ed25519` generation sequence, mounts the public node remotely, and secures the private key locally.
-  * `user add --username <NAME> --pubkey "<KEY>"` — Appends a raw structured public verification vector directly to the user's `authorized_keys`.
-  * `user clear --username <NAME>` — Flushes the verification database by truncating all authorized key signatures for the user.
+  * `user add --pubkey "<KEY>"` — Appends a raw structured public verification vector directly to the user's `authorized_keys`.
+  * `user clear` — Flushes the verification database by truncating all authorized key signatures for the user.
 
 ### 5. FILE MANAGEMENT & SYNC Module (`cmds::sync`)
 Handles high-performance file transfers and declarative environment synchronization using `rsync` over SSH.

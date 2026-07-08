@@ -13,12 +13,17 @@ use prelude::*;
 #[derive(Parser, Debug)]
 #[command(
     name = "infra",
-    version = "0.1.0",
+    version = "0.1.1",
     about = "Remote Infrastructure Orchestrator"
 )]
 pub struct Cli {
+    /// Target remote host name
     #[arg(short, long, global = true)]
     pub target: Option<String>,
+
+    /// Target username (required for 'user' command)
+    #[arg(short, long, global = true, required_if_eq("command", "user"))]
+    pub username: Option<String>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -89,33 +94,30 @@ pub enum TunnelAction {
 #[derive(Subcommand, Debug)]
 pub enum UserAction {
     /// Create a new user
-    New { username: String },
+    New,
     /// Adds a user to the sudo group
-    GrantSudo { username: String },
+    GrantSudo,
     /// Removes a user from the sudo group
-    RevokeSudo { username: String },
+    RevokeSudo,
     /// Operations with specific user's keys
     Key {
         #[command(subcommand)]
         op: UserKeyOp,
     },
     /// Show user status and login history
-    Status { username: String },
+    Status,
     /// Delete a user and their home directory
-    Remove { username: String },
+    Remove,
 }
 
 #[derive(Subcommand, Debug)]
 pub enum UserKeyOp {
     /// Generate and add a key to the user
-    Gen {
-        username: String,
-        output_file: PathBuf,
-    },
+    Gen { output_file: Option<PathBuf> },
     /// Add an existing public key to the user
-    Add { username: String, pubkey: String },
+    Add { pubkey: String },
     /// Clear the user's authorized_keys
-    Clear { username: String },
+    Clear,
 }
 
 #[tokio::main]
@@ -140,7 +142,11 @@ async fn main() -> Result<()> {
 
         Commands::Secure => cmds::secure::handle_secure(&cli.target).await,
 
-        Commands::User { action } => cmds::user::handle_user(&cli.target, action).await,
+        Commands::User { action } => {
+            // SAFETY: clap has checked for the --username flag with 'required_if_eq'
+            let username = cli.username.expect("Expected --username argument");
+            cmds::user::handle_user(&cli.target, username, action).await
+        }
 
         Commands::Send {
             local_path,

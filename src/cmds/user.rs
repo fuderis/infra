@@ -4,17 +4,20 @@ use std::fs;
 use tokio::process::Command;
 
 /// Dispatches account management routines based on the specified user action.
-pub async fn handle_user(target: &Option<String>, action: UserAction) -> Result<()> {
-    // resolve ssh connection details for the target host
+pub async fn handle_user(
+    target: &Option<String>,
+    username: String,
+    action: UserAction,
+) -> Result<()> {
     let conn = super::get_ssh_conn(&target)?;
 
     match action {
-        UserAction::New { username } => handle_new(&conn, username).await?,
-        UserAction::GrantSudo { username } => handle_grant_sudo(&conn, username).await?,
-        UserAction::RevokeSudo { username } => handle_revoke_sudo(&conn, username).await?,
-        UserAction::Status { username } => handle_status(&conn, username).await?,
-        UserAction::Remove { username } => handle_remove(&conn, username).await?,
-        UserAction::Key { op } => handle_key_operations(&conn, op).await?,
+        UserAction::New => handle_new(&conn, username).await?,
+        UserAction::GrantSudo => handle_grant_sudo(&conn, username).await?,
+        UserAction::RevokeSudo => handle_revoke_sudo(&conn, username).await?,
+        UserAction::Status => handle_status(&conn, username).await?,
+        UserAction::Remove => handle_remove(&conn, username).await?,
+        UserAction::Key { op } => handle_key_operations(&conn, username, op).await?,
     }
 
     Ok(())
@@ -171,14 +174,15 @@ async fn handle_remove(conn: &SshConnection, username: String) -> Result<()> {
 }
 
 /// Routes specific cryptographic key mutations.
-async fn handle_key_operations(conn: &SshConnection, op: UserKeyOp) -> Result<()> {
+async fn handle_key_operations(
+    conn: &SshConnection,
+    username: String,
+    op: UserKeyOp,
+) -> Result<()> {
     match op {
-        UserKeyOp::Add { username, pubkey } => handle_key_add(conn, username, pubkey).await?,
-        UserKeyOp::Clear { username } => handle_key_clear(conn, username).await?,
-        UserKeyOp::Gen {
-            username,
-            output_file,
-        } => handle_key_gen(conn, username, output_file).await?,
+        UserKeyOp::Add { pubkey } => handle_key_add(conn, username, pubkey).await?,
+        UserKeyOp::Clear => handle_key_clear(conn, username).await?,
+        UserKeyOp::Gen { output_file } => handle_key_gen(conn, username, output_file).await?,
     }
     Ok(())
 }
@@ -238,8 +242,28 @@ async fn handle_key_clear(conn: &SshConnection, username: String) -> Result<()> 
 async fn handle_key_gen(
     conn: &SshConnection,
     username: String,
-    output_file: PathBuf,
+    output_file: Option<PathBuf>,
 ) -> Result<()> {
+    // defining the final path for the private key
+    let target_key_path = match output_file {
+        Some(path) => path,
+        None => {
+            let local_home = std::env::var_os("HOME").map(PathBuf::from).ok_or_else(|| {
+                Error::Operational("Could not resolve local $HOME directory".into())
+            })?;
+            local_home.join(".ssh").join(format!("infra-{}", username))
+        }
+    };
+
+    // check if such a key already exists, so as not to erase it
+    if target_key_path.exists() {
+        return Err(Error::Operational(format!(
+            "Identity file already exists locally: {}",
+            target_key_path.display()
+        ))
+        .into());
+    }
+
     println!(":: Allocation of isolated staging directory in RAM...");
     let tmp_dir = format!("/tmp/ssh-gen.{}", std::process::id());
     fs::create_dir_all(&tmp_dir)?;
@@ -289,16 +313,16 @@ sudo chmod 600 /home/{0}/.ssh/authorized_keys
 
     // finalize file state locally on successful upload transactions
     if upload_status.success() {
-        fs::write(&output_file, priv_key)?;
+        fs::write(&target_key_path, priv_key)?;
         Command::new("chmod")
             .args(["600"])
-            .arg(&output_file)
+            .arg(&target_key_path)
             .status()
             .await?;
         println!(
             "{} Secret key token securely generated at: {}",
             super::ok(),
-            output_file.display()
+            target_key_path.display()
         );
         Ok(())
     } else {
