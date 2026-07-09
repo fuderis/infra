@@ -13,20 +13,16 @@ use prelude::*;
 #[derive(Parser, Debug)]
 #[command(
     name = "infra",
-    version = "0.1.2",
+    version = "0.1.3",
     about = "Remote Infrastructure Orchestrator"
 )]
 pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+
     /// Target remote host name
     #[arg(short, long, global = true)]
     pub target: Option<String>,
-
-    /// Target username (required for 'user' command)
-    #[arg(short, long, global = true, required_if_eq("command", "user"))]
-    pub username: Option<String>,
-
-    #[command(subcommand)]
-    pub command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
@@ -41,13 +37,13 @@ pub enum Commands {
         #[command(subcommand)]
         action: TunnelAction,
 
-        /// Allow remote hosts to connect to local forwarded ports
-        #[arg(short, long, global = false)]
-        gateway: bool,
-
         /// Specifying the port for the SSH tunnel (1080 by default)
         #[arg(short, long, global = false)]
         port: Option<u16>,
+
+        /// Allow remote hosts to connect to local forwarded ports
+        #[arg(short, long, global = true)]
+        gateway: bool,
     },
 
     //         NETWORK
@@ -73,15 +69,26 @@ pub enum Commands {
     User {
         #[command(subcommand)]
         action: UserAction,
+
+        /// Target username (required for 'user' command)
+        #[arg(short, long, global = true)]
+        username: String,
     },
 
     //         FILE MANAGEMENT
-    /// Copy a local file or directory to the remote host (uses rsync)
-    Send {
+    /// Uploads a local file or directory to the remote host (uses rsync)
+    Upload {
         /// Local path to file or directory
         local_path: PathBuf,
         /// Remote destination path
         remote_path: String,
+    },
+    /// Downloads a file or directory from the remote host to the local machine (uses rsync)
+    Download {
+        /// Remote source path
+        remote_path: String,
+        /// Local destination path
+        local_path: PathBuf,
     },
     /// Synchronize local configurations and dotfiles to the remote host
     Sync { sync_config: String },
@@ -135,8 +142,8 @@ async fn main() -> Result<()> {
         Commands::Connect => cmds::ssh::handle_connect(&cli.target).await,
         Commands::Tunnel {
             action,
-            gateway,
             port,
+            gateway,
         } => cmds::ssh::handle_tunnel(&cli.target, action, gateway, port).await,
 
         Commands::Setup => cmds::system::handle_setup(&cli.target).await,
@@ -148,16 +155,18 @@ async fn main() -> Result<()> {
 
         Commands::Secure => cmds::secure::handle_secure(&cli.target).await,
 
-        Commands::User { action } => {
-            // SAFETY: clap has checked for the --username flag with 'required_if_eq'
-            let username = cli.username.expect("Expected --username argument");
+        Commands::User { action, username } => {
             cmds::user::handle_user(&cli.target, username, action).await
         }
 
-        Commands::Send {
+        Commands::Upload {
             local_path,
             remote_path,
-        } => cmds::sync::handle_send(&cli.target, &local_path, &remote_path).await,
+        } => cmds::sync::handle_upload(&cli.target, &local_path, &remote_path).await,
+        Commands::Download {
+            remote_path,
+            local_path,
+        } => cmds::sync::handle_download(&cli.target, &remote_path, &local_path).await,
         Commands::Sync { sync_config } => cmds::sync::handle_sync(&cli.target, &sync_config).await,
     } {
         println!("{} {e}", cmds::err());

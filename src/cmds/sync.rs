@@ -3,15 +3,15 @@ use std::path::PathBuf;
 use tokio::process::Command;
 
 /// Transports local files or directories to the remote host using rsync over SSH.
-pub async fn handle_send(
+pub async fn handle_upload(
     target: &Option<String>,
     local_path: &PathBuf,
     remote_path: &str,
 ) -> Result<()> {
-    // Resolve SSH connection configuration details
+    // resolve SSH connection configuration details
     let conn = super::get_ssh_conn(target)?;
 
-    // Early exit if the source payload does not exist locally
+    // early exit if the source payload does not exist locally
     if !local_path.exists() {
         return Err(Error::Operational(format!(
             "Local path does not exist: {}",
@@ -28,7 +28,7 @@ pub async fn handle_send(
         remote_path
     );
 
-    // Initialize rsync:
+    // initialize rsync:
     // -a: archive mode (recursive, preserves symlinks, permissions, times)
     // -z: compress data during data transfer
     // -h: human-readable output metrics
@@ -36,16 +36,16 @@ pub async fn handle_send(
     let mut rsync_cmd = Command::new("rsync");
     rsync_cmd.arg("-azh").arg("--info=progress2");
 
-    // Inject custom SSH transport arguments (e.g. non-standard ports, key identity paths)
+    // inject custom SSH transport arguments (e.g. non-standard ports, key identity paths)
     if !conn.args.is_empty() {
         let ssh_env = format!("ssh {}", conn.args.join(" "));
         rsync_cmd.arg("-e").arg(ssh_env);
     }
 
-    // Format target destination descriptor
+    // format target destination descriptor
     let remote_target = format!("{}:{}", conn.target, remote_path);
 
-    // Execute the infrastructure file transfer
+    // execute the infrastructure file transfer
     let status = rsync_cmd
         .arg(local_path)
         .arg(&remote_target)
@@ -69,6 +69,73 @@ pub async fn handle_send(
     Ok(())
 }
 
+/// Downloads remote files or directories to the local host using rsync over SSH.
+pub async fn handle_download(
+    target: &Option<String>,
+    remote_path: &str,
+    local_path: &PathBuf,
+) -> Result<()> {
+    // resolve SSH connection configuration details
+    let conn = super::get_ssh_conn(target)?;
+
+    // pre-create local parent directories if they don't exist
+    if let Some(parent) = local_path.parent() {
+        if !parent.exists() {
+            std::fs::create_dir_all(parent).map_err(|e| {
+                Error::Operational(format!(
+                    "Failed to create local destination directory {}: {}",
+                    parent.display(),
+                    e
+                ))
+            })?;
+        }
+    }
+
+    println!(
+        "{} Downloading {}:{} to {}",
+        super::block(),
+        conn.target,
+        remote_path,
+        local_path.display()
+    );
+
+    // initialize rsync flags (matches your upload configuration)
+    let mut rsync_cmd = Command::new("rsync");
+    rsync_cmd.arg("-azh").arg("--info=progress2");
+
+    // inject custom SSH transport arguments (e.g. non-standard ports, key identity paths)
+    if !conn.args.is_empty() {
+        let ssh_env = format!("ssh {}", conn.args.join(" "));
+        rsync_cmd.arg("-e").arg(ssh_env);
+    }
+
+    // format target source descriptor
+    let remote_target = format!("{}:{}", conn.target, remote_path);
+
+    // execute the infrastructure file transfer (Remote -> Local)
+    let status = rsync_cmd
+        .arg(&remote_target) // source is remote
+        .arg(local_path) // destination is local
+        .status()
+        .await?;
+
+    if !status.success() {
+        return Err(Error::Operational(format!(
+            "Failed to download files via rsync from {}",
+            conn.target
+        ))
+        .into());
+    }
+
+    println!(
+        "{} Successfully downloaded to {}.",
+        super::ok(),
+        local_path.display()
+    );
+
+    Ok(())
+}
+
 /// Synchronizes local configuration files to the remote host by reusing `handle_send`.
 pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<()> {
     let settings = Settings::get();
@@ -78,7 +145,7 @@ pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<(
         .map(PathBuf::from)
         .ok_or_else(|| Error::Operational("Could not resolve local $HOME directory".into()))?;
 
-    // 1. Resolve and aggregate target file arrays depending on the sync_config argument
+    // resolve and aggregate target file arrays depending on the sync_config argument
     let files_to_sync: Vec<PathBuf> = if sync_config == "@" {
         let mut all_files = Vec::new();
         for item in settings.sync.configs.values() {
@@ -105,7 +172,7 @@ pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<(
         super::block()
     );
 
-    // 2. Pre-generate target directory structures on the remote host
+    // pre-generate target directory structures on the remote host
     let mut mkdir_dirs = Vec::new();
     for path in &files_to_sync {
         if let Ok(relative_path) = path.strip_prefix(&local_home) {
@@ -141,14 +208,14 @@ pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<(
         }
     }
 
-    // 3. Sequentially process and stream files via the centralized rsync pipeline
+    // sequentially process and stream files via the centralized rsync pipeline
     for local_path in files_to_sync {
         let remote_path_str = match local_path.strip_prefix(&local_home) {
             Ok(rel) => rel.to_string_lossy().into_owned(),
             Err(_) => local_path.to_string_lossy().into_owned(),
         };
 
-        handle_send(target, &local_path, &remote_path_str).await?;
+        handle_upload(target, &local_path, &remote_path_str).await?;
     }
 
     Ok(())

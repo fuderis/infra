@@ -33,7 +33,7 @@ Handles interactive login sessions and background network proxy streams.
 
 * `infra list` — Lists all infrastructure hosts configured in `settings.toml`.
 * `infra [-t TARGET] connect` — Spawns a native, interactive SSH terminal session to the target host.
-* `infra [-t TARGET] tunnel [-p PORT] <ACTION>` — Manages a persistent background SOCKS5 SSH tunnel bound to local port (`1080` by default).
+* `infra [-t TARGET] tunnel [-g] [-p PORT] <ACTION>` — Manages a persistent background SOCKS5 SSH tunnel bound to local port (`1080` by default).
   * `start` — Launches the background monitoring watchdog within an isolated process group (`setsid`).
   * `stop` — Safely tears down the entire process group session and flushes the PID lockfile.
   * `restart` — Cycles the active network proxy daemon offline and online.
@@ -78,14 +78,16 @@ User Actions:
 ### 5. FILE MANAGEMENT & SYNC Module (`cmds::sync`)
 Handles high-performance file transfers and declarative environment synchronization using `rsync` over SSH.
 
-* `infra [-t TARGET] send <LOCAL_PATH> <REMOTE_PATH>` — Transports a specific local file or directory to the remote host.
-  * Automatically injects custom SSH arguments (ports, identity keys) from your host configuration.
+* `infra [-t TARGET] upload <LOCAL_PATH> <REMOTE_PATH>` — Transports a specific local file or directory to the remote host.
   * Uses archive mode (`-azh`) with real-time compression and non-interactive stream progress tracking.
+* `infra [-t TARGET] download <REMOTE_PATH> <LOCAL_PATH>` — Downloads a specific file or directory from the remote host to the local machine.
+  * Uses archive mode (`-azh`) with real-time compression and non-interactive stream progress tracking (`--info=progress2`).
+  * **Automated Target Provisioning:** Automatically verifies and pre-creates the local destination parent directory structure using idempotent path allocation before starting the transfer to avoid `rsync` target omission errors.
 * `infra [-t TARGET] sync <CONFIG_NAME>` — Synchronizes local configuration profiles (dotfiles) defined in `settings.toml` to the remote host.
   * **Smart Path Resolution:** If `<CONFIG_NAME>` is specified as `@`, the utility aggregates and pushes **all** defined configuration profiles sequentially.
   * **Cross-User Home Normalization:** Automatically strips the local `$HOME` prefix from paths.
-    If you are syncing a file from `/home/local_user/.config/helix` to a server where you log in as `ubuntu`,
-    the file will be correctly mirrored into `/home/ubuntu/.config/helix`.
+    If you are syncing a file from `/home/<USER_NAME>/.config/helix` to a server where you log in as `ubuntu`,
+    the file will be correctly mirrored into `/home/<USER_NAME>/.config/helix`.
   * **Idempotent Directory Provisioning:** Prior to file transfer, executes an isolated, aggregated `mkdir -p` call over SSH to pre-generate deep remote directory structures,
     avoiding `rsync` target omission errors.
 
