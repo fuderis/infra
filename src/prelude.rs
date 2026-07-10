@@ -1,4 +1,4 @@
-pub use crate::{error::Error, settings::Settings};
+pub use crate::{APP_NAME, APP_VERSION, error::Error, settings::Settings};
 
 pub use std::result::Result as StdResult;
 

@@ -10,10 +10,13 @@ pub mod cmds;
 use clap::{Parser, Subcommand};
 use prelude::*;
 
+pub const APP_NAME: &str = "infra";
+pub const APP_VERSION: &str = "0.1.4";
+
 #[derive(Parser, Debug)]
 #[command(
-    name = "infra",
-    version = "0.1.3",
+    name = APP_NAME,
+    version = APP_VERSION,
     about = "Remote Infrastructure Orchestrator"
 )]
 pub struct Cli {
@@ -133,7 +136,7 @@ pub enum UserKeyOp {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    Settings::init(path!("~/.config/infra/settings.toml")).await?;
+    Settings::init(path!("$config$/settings.toml")).await?;
 
     let cli = Cli::parse();
 

@@ -32,8 +32,8 @@ impl ::std::default::Default for SyncOptions {
     fn default() -> Self {
         Self {
             configs: map! {
-                str!("helix") => SyncConfig::new(vec![path!("~/.config/helix/config.toml")]),
-                str!("nvim") => SyncConfig::new(vec![path!("~/.config/nvim/init.lua")]),
+                str!("helix") => SyncConfig::new(vec![path!("$config/helix/config.toml")]),
+                str!("nvim") => SyncConfig::new(vec![path!("$config/nvim/init.lua")]),
             },
         }
     }
