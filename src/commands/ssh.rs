@@ -135,7 +135,7 @@ async fn handle_tunnel_start(conn: &SshConnection, gateway: bool, port: u16) -> 
     Ok(())
 }
 
-/// Disconnects and terminates running tunnel session groups safely.
+/// Disconnects and terminates running tunnel session groups safely
 async fn handle_tunnel_stop(port: u16) -> Result<()> {
     println!(":: Disconnecting SOCKS5 tunnel sessions...");
     let pid_file = get_pid_file(port);
@@ -174,7 +174,7 @@ async fn handle_tunnel_stop(port: u16) -> Result<()> {
     Ok(())
 }
 
-/// Cycles the active network daemon offline and online.
+/// Cycles the active network daemon offline and online
 async fn handle_tunnel_restart(target: &Option<String>, gateway: bool, port: u16) -> Result<()> {
     handle_tunnel_stop(port).await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -185,7 +185,7 @@ async fn handle_tunnel_restart(target: &Option<String>, gateway: bool, port: u16
     Ok(())
 }
 
-/// Audits current process status matrices for active tunnel allocations.
+/// Audits current process status matrices for active tunnel allocations
 async fn handle_tunnel_status(port: u16) -> Result<()> {
     // scan process snapshot tables for alive background forwarding instances
     let status = Command::new("pgrep")

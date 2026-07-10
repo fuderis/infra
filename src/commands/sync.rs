@@ -2,7 +2,7 @@ use crate::prelude::*;
 use std::path::PathBuf;
 use tokio::process::Command;
 
-/// Transports local files or directories to the remote host using rsync over SSH.
+/// Transports local files or directories to the remote host using rsync over SSH
 pub async fn handle_upload(
     target: &Option<String>,
     local_path: &PathBuf,
@@ -69,7 +69,7 @@ pub async fn handle_upload(
     Ok(())
 }
 
-/// Downloads remote files or directories to the local host using rsync over SSH.
+/// Downloads remote files or directories to the local host using rsync over SSH
 pub async fn handle_download(
     target: &Option<String>,
     remote_path: &str,
@@ -136,7 +136,7 @@ pub async fn handle_download(
     Ok(())
 }
 
-/// Synchronizes local configuration files to the remote host by reusing `handle_send`.
+/// Synchronizes local configuration files to the remote host by reusing `handle_send`
 pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<()> {
     let settings = Settings::get();
     let conn = super::get_ssh_conn(target)?;

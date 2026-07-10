@@ -3,7 +3,7 @@ use crate::{UserAction, UserKeyOp, prelude::*};
 use std::fs;
 use tokio::process::Command;
 
-/// Dispatches account management routines based on the specified user action.
+/// Dispatches account management routines based on the specified user action
 pub async fn handle_user(
     target: &Option<String>,
     username: String,
@@ -23,7 +23,7 @@ pub async fn handle_user(
     Ok(())
 }
 
-/// Creates a new unprivileged system user with an initialized ssh directory.
+/// Creates a new unprivileged system user with an initialized ssh directory
 async fn handle_new(conn: &SshConnection, username: String) -> Result<()> {
     println!(":: Provisioning isolated user workspace: {}...", username);
 
@@ -50,7 +50,7 @@ sudo chmod 700 /home/{0}/.ssh
     Ok(())
 }
 
-/// Appends the targeted user account to the secondary administrative sudo group.
+/// Appends the targeted user account to the secondary administrative sudo group
 async fn handle_grant_sudo(conn: &SshConnection, username: String) -> Result<()> {
     println!(
         ":: Granting administrative privileges to user: {}...",
@@ -86,7 +86,7 @@ sudo usermod -aG sudo {0}
     }
 }
 
-/// Removes the targeted user account from the secondary administrative sudo group.
+/// Removes the targeted user account from the secondary administrative sudo group
 async fn handle_revoke_sudo(conn: &SshConnection, username: String) -> Result<()> {
     println!(
         ":: Revoking administrative privileges from user: {}...",
@@ -125,7 +125,7 @@ sudo deluser {0} sudo
     }
 }
 
-/// Audits detailed structural and session metrics for a single host account.
+/// Audits detailed structural and session metrics for a single host account
 async fn handle_status(conn: &SshConnection, username: String) -> Result<()> {
     // gather id, path, terminal, and operational log data
     let script = format!(
@@ -152,7 +152,7 @@ echo -e '\n=== INTERACTIVE SESSION RECORDS ===' && (last -n 5 {0} || true)
     Ok(())
 }
 
-/// Destroys a user identity along with all attached files and home folders.
+/// Destroys a user identity along with all attached files and home folders
 async fn handle_remove(conn: &SshConnection, username: String) -> Result<()> {
     println!(
         ":: Wiping target environment structures for: {}...",
@@ -187,7 +187,7 @@ async fn handle_key_operations(
     Ok(())
 }
 
-/// Manually appends a structured public signature string to authorized keys.
+/// Manually appends a structured public signature string to authorized keys
 async fn handle_key_add(conn: &SshConnection, username: String, pubkey: String) -> Result<()> {
     println!(
         ":: Exporting static verification vector to user {}...",
@@ -217,7 +217,7 @@ sudo chmod 600 /home/{0}/.ssh/authorized_keys
     Ok(())
 }
 
-/// Flushes the verification database file by truncating all payload contents.
+/// Flushes the verification database file by truncating all payload contents
 async fn handle_key_clear(conn: &SshConnection, username: String) -> Result<()> {
     println!(":: Wiping authorized crypt-keys for user {}...", username);
 
@@ -238,7 +238,7 @@ async fn handle_key_clear(conn: &SshConnection, username: String) -> Result<()> 
     Ok(())
 }
 
-/// Generates an asymmetric keypair locally and mounts the public node remotely.
+/// Generates an asymmetric keypair locally and mounts the public node remotely
 async fn handle_key_gen(
     conn: &SshConnection,
     username: String,

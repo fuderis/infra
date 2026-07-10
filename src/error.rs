@@ -1,7 +1,8 @@
-// use crate::prelude::DynError;
+#![allow(unused_imports)]
+use crate::prelude::DynError;
 use macron::{Display, Error, From};
 
-// The error
+// The application error
 #[derive(Debug, Display, Error, From)]
 pub enum Error {
     #[from(skip)]

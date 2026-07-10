@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use tokio::process::Command;
 
-/// Measures round-trip latency using icmp echo requests.
+/// Measures round-trip latency using icmp echo requests
 pub async fn handle_ping(target: &Option<String>) -> Result<()> {
     // resolve network details for the target host
     let host = super::get_remote_host(target)?;
@@ -17,7 +17,7 @@ pub async fn handle_ping(target: &Option<String>) -> Result<()> {
     Ok(())
 }
 
-/// Traces the layer-3 network path to the remote host.
+/// Traces the layer-3 network path to the remote host
 pub async fn handle_trace(target: &Option<String>) -> Result<()> {
     // resolve network details for the target host
     let host = super::get_remote_host(target)?;
@@ -41,7 +41,7 @@ pub async fn handle_trace(target: &Option<String>) -> Result<()> {
     Ok(())
 }
 
-/// Performs continuous network quality analysis using mtr.
+/// Performs continuous network quality analysis using mtr
 pub async fn handle_route(target: &Option<String>) -> Result<()> {
     // resolve network details for the target host
     let host = super::get_remote_host(target)?;
@@ -77,7 +77,7 @@ pub async fn handle_route(target: &Option<String>) -> Result<()> {
     Ok(())
 }
 
-/// Installs a missing system package using the host platform package manager.
+/// Installs a missing system package using the host platform package manager
 async fn install_dependency(package: &str) -> Result<()> {
     // handle dependency provisioning for linux environments
     #[cfg(target_os = "linux")]

@@ -5,13 +5,13 @@ pub mod settings;
 pub mod share;
 pub use share::{RemoteHost, SyncConfig};
 
-pub mod cmds;
+pub mod commands;
 
 use clap::{Parser, Subcommand};
 use prelude::*;
 
 pub const APP_NAME: &str = "infra";
-pub const APP_VERSION: &str = "0.1.4";
+pub const APP_VERSION: &str = "0.1.5";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -136,6 +136,8 @@ pub enum UserKeyOp {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    use commands as cmds;
+
     Settings::init(path!("$config$/settings.toml")).await?;
 
     let cli = Cli::parse();

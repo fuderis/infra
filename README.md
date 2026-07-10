@@ -20,7 +20,7 @@ It provides a structured, predictable alternative to complex shell scripts by ha
 * **Passive Host Inspections:** Aggregates remote system statistics by parsing low-overhead runtime counters, `ss` network socket tables, active firewall states,
   and active interactive terminal sessions.
 
-## Command Architecture & Usage
+## Commands & Usage
 
 The global flag `-t` | `--target` is used to specify the target host defined in your configuration file.
 
@@ -101,12 +101,25 @@ infra -t admin sync helix
 infra -t admin sync @
 ```
 
-## Infra Configuration
+## Requirements
 
-On initialization, the utility looks for its configuration blueprint at the following path:
+- Unix-like OS (`Linux`, `macOS`, `BSD`)
+- Rust toolchain (`cargo`)
+
+## Installation
+
+Just run the following commands:
+
+```bash
+git clone https://github.com/fuderis/infra
+cd infra
+bash build.sh
+```
+ 
+## Configuration
+
+The configuration file is located on:
 `~/.config/infra/settings.toml`
-
-Configuration profile by default (change to your own):
 
 ```toml
 [remote]
@@ -128,29 +141,9 @@ files = ["/home/<user-name>/.config/helix/config.toml"]
 files = ["/home/<user-name>/.config/nvim/init.lua"]
 ```
 
-## Installation Guide
-
-To build the project executable from source, ensure you have the standard Rust toolchain (`cargo`) installed.
-
-1. Clone the repository from GitHub
-```bash
-git clone https://github.com/fuderis/infra.git
-cd infra
-```
-
-2. Run installation script
-```bash
-bash build.sh
-```
-
-3. Now you can delete the source code
-```bash
-rm -rf infra
-```
- 
 ## License & Feedback
 
-> This software distributed under the [GPL 3.0](https://github.com/fuderis/infra/blob/main/LICENSE.md) license.
+> This software is distributed under the [GPL-3.0](LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
-This library is actively evolving, and your suggestions and feedback are always welcome!
+This project is actively evolving, and your suggestions and feedback are always welcome!
