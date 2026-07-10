@@ -119,7 +119,10 @@ bash build.sh
 ## Configuration
 
 The configuration file is located on:
-`~/.config/infra/settings.toml`
+
+```text
+~/.config/infra/settings.toml
+```
 
 ```toml
 [remote]
