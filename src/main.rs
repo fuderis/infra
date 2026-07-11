@@ -20,12 +20,12 @@ pub const APP_VERSION: &str = "0.1.5";
     about = "Remote Infrastructure Orchestrator"
 )]
 pub struct Cli {
-    #[command(subcommand)]
-    pub command: Commands,
-
     /// Target remote host name
     #[arg(short, long, global = true)]
     pub target: Option<String>,
+
+    #[command(subcommand)]
+    pub command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
@@ -43,10 +43,6 @@ pub enum Commands {
         /// Specifying the port for the SSH tunnel (1080 by default)
         #[arg(short, long, global = false)]
         port: Option<u16>,
-
-        /// Allow remote hosts to connect to local forwarded ports
-        #[arg(short, long, global = true)]
-        gateway: bool,
     },
 
     //         NETWORK
@@ -70,12 +66,12 @@ pub enum Commands {
     //         USERS
     /// User management on a remote server
     User {
-        #[command(subcommand)]
-        action: UserAction,
-
         /// Target username (required for 'user' command)
         #[arg(short, long, global = true)]
-        username: String,
+        username: Option<String>,
+
+        #[command(subcommand)]
+        action: UserAction,
     },
 
     //         FILE MANAGEMENT
@@ -99,9 +95,17 @@ pub enum Commands {
 
 #[derive(Subcommand, Debug, Clone, Copy)]
 pub enum TunnelAction {
-    Start,
+    Start {
+        /// Allow remote hosts to connect to local forwarded ports
+        #[arg(short, long)]
+        gateway: bool,
+    },
     Stop,
-    Restart,
+    Restart {
+        /// Allow remote hosts to connect to local forwarded ports
+        #[arg(short, long)]
+        gateway: bool,
+    },
     Status,
 }
 
@@ -145,11 +149,9 @@ async fn main() -> Result<()> {
     if let Err(e) = match cli.command {
         Commands::List => cmds::ssh::handle_list().await,
         Commands::Connect => cmds::ssh::handle_connect(&cli.target).await,
-        Commands::Tunnel {
-            action,
-            port,
-            gateway,
-        } => cmds::ssh::handle_tunnel(&cli.target, action, gateway, port).await,
+        Commands::Tunnel { action, port } => {
+            cmds::ssh::handle_tunnel(&cli.target, action, port).await
+        }
 
         Commands::Setup => cmds::system::handle_setup(&cli.target).await,
         Commands::Usage => cmds::system::handle_usage(&cli.target).await,
@@ -161,7 +163,11 @@ async fn main() -> Result<()> {
         Commands::Secure => cmds::secure::handle_secure(&cli.target).await,
 
         Commands::User { action, username } => {
-            cmds::user::handle_user(&cli.target, username, action).await
+            if let Some(username) = username {
+                cmds::user::handle_user(&cli.target, username, action).await
+            } else {
+                Err(Error::Operational(str!("Expected --username argument")).into())
+            }
         }
 
         Commands::Upload {

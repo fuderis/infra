@@ -103,8 +103,8 @@ infra -t admin sync @
 
 ## Requirements
 
-- Unix-like OS (`Linux`, `macOS`, `BSD`)
-- Rust toolchain (`cargo`)
+* Unix-like OS (`Linux`, `macOS`, `BSD`)
+* Rust toolchain (`cargo`)
 
 ## Installation
 
@@ -149,4 +149,4 @@ files = ["/home/<user-name>/.config/nvim/init.lua"]
 > This software is distributed under the [GPL-3.0](LICENSE.md) license.
 
 You can contact me via [GitHub](https://github.com/fuderis) or send a message to my [E-Mail](mailto:synapdrake@ya.ru).
-This project is actively evolving, and your suggestions and feedback are always welcome!
+Contributions, bug reports, feature requests, and feedback are always welcome.

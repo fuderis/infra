@@ -53,7 +53,6 @@ pub async fn handle_connect(target: &Option<String>) -> Result<()> {
 pub async fn handle_tunnel(
     target: &Option<String>,
     action: TunnelAction,
-    gateway: bool,
     port: Option<u16>,
 ) -> Result<()> {
     // resolve ssh connection details for the target host
@@ -61,9 +60,9 @@ pub async fn handle_tunnel(
     let port = port.unwrap_or(1080);
 
     match action {
-        TunnelAction::Start => handle_tunnel_start(&conn, gateway, port).await?,
+        TunnelAction::Start { gateway } => handle_tunnel_start(&conn, gateway, port).await?,
         TunnelAction::Stop => handle_tunnel_stop(port).await?,
-        TunnelAction::Restart => handle_tunnel_restart(target, gateway, port).await?,
+        TunnelAction::Restart { gateway } => handle_tunnel_restart(target, gateway, port).await?,
         TunnelAction::Status => handle_tunnel_status(port).await?,
     }
     Ok(())
