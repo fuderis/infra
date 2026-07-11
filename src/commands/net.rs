@@ -6,7 +6,7 @@ pub async fn handle_ping(target: &Option<String>) -> Result<()> {
     // resolve network details for the target host
     let host = super::get_remote_host(target)?;
 
-    println!("{} Monitoring ICMP latency to {host}", super::block());
+    println!("{} Monitoring ICMP latency to {host}", super::log());
 
     // execute system ping with a fixed count of 10 packets
     Command::new("ping")
@@ -24,7 +24,7 @@ pub async fn handle_trace(target: &Option<String>) -> Result<()> {
 
     println!(
         "{} Execution of layer-3 route tracking (traceroute) to {host}",
-        super::block()
+        super::log()
     );
 
     // ensure traceroute binary is available before proceeding
@@ -48,7 +48,7 @@ pub async fn handle_route(target: &Option<String>) -> Result<()> {
 
     println!(
         "{} Realtime continuous quality network analysis (MTR) to {host}",
-        super::block()
+        super::log()
     );
 
     // ensure mtr binary is available before proceeding

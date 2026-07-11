@@ -22,7 +22,7 @@ pub async fn handle_upload(
 
     println!(
         "{} Transporting {} to {}:{}",
-        super::block(),
+        super::log(),
         local_path.display(),
         conn.target,
         remote_path
@@ -93,7 +93,7 @@ pub async fn handle_download(
 
     println!(
         "{} Downloading {}:{} to {}",
-        super::block(),
+        super::log(),
         conn.target,
         remote_path,
         local_path.display()
@@ -169,7 +169,7 @@ pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<(
 
     println!(
         "{} Initializing smart dotfile synchronization via rsync",
-        super::block()
+        super::log()
     );
 
     // pre-generate target directory structures on the remote host

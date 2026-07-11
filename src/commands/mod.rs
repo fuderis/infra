@@ -38,7 +38,7 @@ pub fn get_ssh_conn(target: &Option<String>) -> Result<SshConnection> {
     Ok(SshConnection { target, args })
 }
 
-pub fn block() -> ColoredString {
+pub fn log() -> ColoredString {
     "==>".blue()
 }
 pub fn ok() -> ColoredString {

@@ -35,7 +35,7 @@ pub async fn handle_setup(target: &Option<String>) -> Result<()> {
     // resolve ssh connection details for the target host
     let conn = super::get_ssh_conn(target)?;
 
-    println!("{} EXPORTING CURRENT SSH IDENTITY", super::block());
+    println!("{} EXPORTING CURRENT SSH IDENTITY", super::log());
 
     // initialize ssh-copy-id command to transfer public keys
     let mut copy_id_cmd = Command::new("ssh-copy-id");
@@ -46,7 +46,7 @@ pub async fn handle_setup(target: &Option<String>) -> Result<()> {
 
     println!(
         "{} REMOTELY COMPILING INFRASTRUCTURE CONFIGURATION",
-        super::block()
+        super::log()
     );
 
     // main provisioning script containing package setup, firewall, and hardening
