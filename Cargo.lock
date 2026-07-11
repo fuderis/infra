@@ -354,7 +354,7 @@ dependencies = [
  "atoman",
  "clap",
  "colored",
- "macron 0.3.0",
+ "macron 0.4.0",
  "serde",
  "serde_json",
  "tokio",
@@ -426,9 +426,9 @@ dependencies = [
 
 [[package]]
 name = "macron"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b505794889972f2889e5c54e75bb4ada9f60155316c3de8af41bebaaa023ae0"
+checksum = "3d2da41a97a5221e1ac8e7ddfb3293fea266c28c38562df3ddaa986ff22d07aa"
 dependencies = [
  "async-recursion",
  "macron-collections",
@@ -564,9 +564,9 @@ dependencies = [
 
 [[package]]
 name = "macron-path"
-version = "0.2.0"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5e719b6511da7212323c1eabe7c67a3b528a93fb3507f8a41d36e84b602b808"
+checksum = "729451c952edbcd837f8729fed8b767b2b5a00a93a28b0fabb0b760811f7c701"
 dependencies = [
  "proc-macro2",
  "quote",
