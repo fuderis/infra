@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use prelude::*;
 
 pub const APP_NAME: &str = "infra";
-pub const APP_VERSION: &str = "0.1.5";
+pub const APP_VERSION: &str = "0.1.6";
 
 #[derive(Parser, Debug)]
 #[command(
