@@ -29,6 +29,7 @@ infra [OPTIONS] <COMMAND>
 ```
 
 ### 1. SSH Module (`cmds::ssh`)
+
 Handles interactive login sessions and background network proxy streams.
 
 * `infra list` — Lists all infrastructure hosts configured in `settings.toml`.
@@ -42,6 +43,7 @@ Handles interactive login sessions and background network proxy streams.
  > The flag `-g` | `--gateway` allows you to start a tunnel for all devices on the local network.
 
 ### 2. NETWORK Module (`cmds::net`)
+
 Performs rapid network health checks and path discovery to the remote machine.
 
 * `infra [-t TARGET] ping` — Triggers a rapid ICMP ping check to the remote server.
@@ -49,6 +51,7 @@ Performs rapid network health checks and path discovery to the remote machine.
 * `infra [-t TARGET] route` — Runs a continuous, real-time route quality audit using `mtr`.
 
 ### 3. SYSTEM & SECURITY Modules (`cmds::system`, `cmds::secure`)
+
 Automates host configurations and evaluates threat posture (Debian/Ubuntu specific).
 
 * `infra [-t TARGET] setup` — Performs initial, secure server hardening: triggers `apt` updates, installs and configures `fail2ban`,
@@ -58,6 +61,7 @@ Automates host configurations and evaluates threat posture (Debian/Ubuntu specif
   open socket tables (`ss`), and current active user login records.
 
 ### 4. USERS Module (`cmds::user`)
+
 Provides an end-to-end suite for remote user account lifecycle mutations.
 
 ```bash
@@ -76,6 +80,7 @@ User Actions:
   * `user clear` — Flushes the verification database by truncating all authorized key signatures for the user.
 
 ### 5. FILE MANAGEMENT & SYNC Module (`cmds::sync`)
+
 Handles high-performance file transfers and declarative environment synchronization using `rsync` over SSH.
 
 * `infra [-t TARGET] upload <LOCAL_PATH> <REMOTE_PATH>` — Transports a specific local file or directory to the remote host.
@@ -92,13 +97,23 @@ Handles high-performance file transfers and declarative environment synchronizat
     avoiding `rsync` target omission errors.
 
 #### Sync Example
+
 To synchronize only your editor configuration or backup everything:
+
 ```bash
 # Sync only Helix editor configs
 infra -t admin sync helix
 
 # Sync absolutely all configuration blocks defined in settings.toml
 infra -t admin sync @
+```
+
+### Specific IP
+
+Using a specific IP address
+
+```bash
+infra ping --count 4 --ip 127.0.0.1
 ```
 
 ## Requirements

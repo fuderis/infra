@@ -2,15 +2,15 @@ use crate::prelude::*;
 use tokio::process::Command;
 
 /// Measures round-trip latency using icmp echo requests
-pub async fn handle_ping(target: &Option<String>) -> Result<()> {
+pub async fn handle_ping(target: &Option<String>, ip: &Option<String>, count: usize) -> Result<()> {
     // resolve network details for the target host
-    let host = super::get_remote_host(target)?;
+    let host = super::get_remote_host(target, ip)?;
 
     println!("{} Monitoring ICMP latency to {host}", super::log());
 
     // execute system ping with a fixed count of 10 packets
     Command::new("ping")
-        .args(["-c", "10", &host.ip_addr])
+        .args(["-c", &count.to_string(), &host.ip_addr])
         .status()
         .await?;
 
@@ -18,9 +18,9 @@ pub async fn handle_ping(target: &Option<String>) -> Result<()> {
 }
 
 /// Traces the layer-3 network path to the remote host
-pub async fn handle_trace(target: &Option<String>) -> Result<()> {
+pub async fn handle_trace(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve network details for the target host
-    let host = super::get_remote_host(target)?;
+    let host = super::get_remote_host(target, ip)?;
 
     println!(
         "{} Execution of layer-3 route tracking (traceroute) to {host}",
@@ -42,9 +42,9 @@ pub async fn handle_trace(target: &Option<String>) -> Result<()> {
 }
 
 /// Performs continuous network quality analysis using mtr
-pub async fn handle_route(target: &Option<String>) -> Result<()> {
+pub async fn handle_route(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve network details for the target host
-    let host = super::get_remote_host(target)?;
+    let host = super::get_remote_host(target, ip)?;
 
     println!(
         "{} Realtime continuous quality network analysis (MTR) to {host}",

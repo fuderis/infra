@@ -6,10 +6,11 @@ use tokio::process::Command;
 /// Dispatches account management routines based on the specified user action
 pub async fn handle_user(
     target: &Option<String>,
+    ip: &Option<String>,
     username: String,
     action: UserAction,
 ) -> Result<()> {
-    let conn = super::get_ssh_conn(&target)?;
+    let conn = super::get_ssh_conn(&target, ip)?;
 
     match action {
         UserAction::New => handle_new(&conn, username).await?,

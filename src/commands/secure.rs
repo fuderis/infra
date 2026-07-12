@@ -2,9 +2,9 @@ use crate::prelude::*;
 use tokio::process::Command;
 
 /// Inspects security state, firewall rules, and authentication logs on the remote server.
-pub async fn handle_secure(target: &Option<String>) -> Result<()> {
+pub async fn handle_secure(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve ssh connection details for the target host
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     // inline bash script to collect security metrics and log data
     let script = r#"

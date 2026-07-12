@@ -5,11 +5,12 @@ use tokio::process::Command;
 /// Transports local files or directories to the remote host using rsync over SSH
 pub async fn handle_upload(
     target: &Option<String>,
+    ip: &Option<String>,
     local_path: &PathBuf,
     remote_path: &str,
 ) -> Result<()> {
     // resolve SSH connection configuration details
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     // early exit if the source payload does not exist locally
     if !local_path.exists() {
@@ -72,11 +73,12 @@ pub async fn handle_upload(
 /// Downloads remote files or directories to the local host using rsync over SSH
 pub async fn handle_download(
     target: &Option<String>,
+    ip: &Option<String>,
     remote_path: &str,
     local_path: &PathBuf,
 ) -> Result<()> {
     // resolve SSH connection configuration details
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     // pre-create local parent directories if they don't exist
     if let Some(parent) = local_path.parent() {
@@ -137,9 +139,13 @@ pub async fn handle_download(
 }
 
 /// Synchronizes local configuration files to the remote host by reusing `handle_send`
-pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<()> {
+pub async fn handle_sync(
+    target: &Option<String>,
+    ip: &Option<String>,
+    sync_config: &str,
+) -> Result<()> {
     let settings = Settings::get();
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     let local_home = std::env::var_os("HOME")
         .map(PathBuf::from)
@@ -215,7 +221,7 @@ pub async fn handle_sync(target: &Option<String>, sync_config: &str) -> Result<(
             Err(_) => local_path.to_string_lossy().into_owned(),
         };
 
-        handle_upload(target, &local_path, &remote_path_str).await?;
+        handle_upload(target, ip, &local_path, &remote_path_str).await?;
     }
 
     Ok(())

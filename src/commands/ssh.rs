@@ -30,9 +30,9 @@ pub async fn handle_list() -> Result<()> {
 }
 
 /// Spawns an interactive ssh terminal session
-pub async fn handle_connect(target: &Option<String>) -> Result<()> {
+pub async fn handle_connect(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve ssh connection details for the target host
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     println!(
         ":: Establishing interactive SSH session to {}...",
@@ -52,17 +52,18 @@ pub async fn handle_connect(target: &Option<String>) -> Result<()> {
 /// Manages the lifecycle of a persistent background socks5 proxy tunnel
 pub async fn handle_tunnel(
     target: &Option<String>,
+    ip: &Option<String>,
     action: TunnelAction,
     port: Option<u16>,
 ) -> Result<()> {
     // resolve ssh connection details for the target host
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
     let port = port.unwrap_or(1080);
 
     match action {
         TunnelAction::Start { gateway } => handle_tunnel_start(&conn, gateway, port).await?,
         TunnelAction::Stop => handle_tunnel_stop(port).await?,
-        TunnelAction::Restart { gateway } => handle_tunnel_restart(target, gateway, port).await?,
+        TunnelAction::Restart { gateway } => handle_tunnel_restart(&conn, gateway, port).await?,
         TunnelAction::Status => handle_tunnel_status(port).await?,
     }
     Ok(())
@@ -174,12 +175,11 @@ async fn handle_tunnel_stop(port: u16) -> Result<()> {
 }
 
 /// Cycles the active network daemon offline and online
-async fn handle_tunnel_restart(target: &Option<String>, gateway: bool, port: u16) -> Result<()> {
+async fn handle_tunnel_restart(conn: &SshConnection, gateway: bool, port: u16) -> Result<()> {
     handle_tunnel_stop(port).await?;
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
     // re-resolve configuration tree mappings for the startup pass
-    let conn = super::get_ssh_conn(target)?;
     handle_tunnel_start(&conn, gateway, port).await?;
     Ok(())
 }

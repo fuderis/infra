@@ -3,9 +3,9 @@ use std::process::Stdio;
 use tokio::{io::AsyncWriteExt, process::Command};
 
 /// Fetches and displays remote server resource usage metrics.
-pub async fn handle_usage(target: &Option<String>) -> Result<()> {
+pub async fn handle_usage(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve ssh connection details for the target host
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     // inline bash script to gather system metrics
     let script = r#"
@@ -31,9 +31,9 @@ echo "==================== SWAP VOLUME ====================" && swapon --show
 }
 
 /// Provisions and hardens the remote server infrastructure.
-pub async fn handle_setup(target: &Option<String>) -> Result<()> {
+pub async fn handle_setup(target: &Option<String>, ip: &Option<String>) -> Result<()> {
     // resolve ssh connection details for the target host
-    let conn = super::get_ssh_conn(target)?;
+    let conn = super::get_ssh_conn(target, ip)?;
 
     println!("{} EXPORTING CURRENT SSH IDENTITY", super::log());
 

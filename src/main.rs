@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use prelude::*;
 
 pub const APP_NAME: &str = "infra";
-pub const APP_VERSION: &str = "0.1.6";
+pub const APP_VERSION: &str = "0.2.0";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -23,6 +23,10 @@ pub struct Cli {
     /// Target remote host name
     #[arg(short, long, global = true)]
     pub target: Option<String>,
+
+    /// Explicitly specify the target IP address (bypasses config check)
+    #[arg(long, global = true)]
+    pub ip: Option<String>,
 
     #[command(subcommand)]
     pub command: Commands,
@@ -47,7 +51,11 @@ pub enum Commands {
 
     //         NETWORK
     /// Quick ICMP ping check to remote server
-    Ping,
+    Ping {
+        /// Number of packets to send
+        #[arg(short, long, default_value = "10")]
+        count: usize,
+    },
     /// Route tracing (traceroute)
     Trace,
     /// Continuous Route Quality Audit (mtr)
@@ -146,25 +154,28 @@ async fn main() -> Result<()> {
 
     let cli = Cli::parse();
 
+    let target = &cli.target;
+    let ip = &cli.ip;
+
     if let Err(e) = match cli.command {
         Commands::List => cmds::ssh::handle_list().await,
-        Commands::Connect => cmds::ssh::handle_connect(&cli.target).await,
+        Commands::Connect => cmds::ssh::handle_connect(&target, &ip).await,
         Commands::Tunnel { action, port } => {
-            cmds::ssh::handle_tunnel(&cli.target, action, port).await
+            cmds::ssh::handle_tunnel(&target, &ip, action, port).await
         }
 
-        Commands::Setup => cmds::system::handle_setup(&cli.target).await,
-        Commands::Usage => cmds::system::handle_usage(&cli.target).await,
+        Commands::Setup => cmds::system::handle_setup(&target, &ip).await,
+        Commands::Usage => cmds::system::handle_usage(&target, &ip).await,
 
-        Commands::Ping => cmds::net::handle_ping(&cli.target).await,
-        Commands::Trace => cmds::net::handle_trace(&cli.target).await,
-        Commands::Route => cmds::net::handle_route(&cli.target).await,
+        Commands::Ping { count } => cmds::net::handle_ping(&target, &ip, count).await,
+        Commands::Trace => cmds::net::handle_trace(&target, &ip).await,
+        Commands::Route => cmds::net::handle_route(&target, &ip).await,
 
-        Commands::Secure => cmds::secure::handle_secure(&cli.target).await,
+        Commands::Secure => cmds::secure::handle_secure(&target, &ip).await,
 
         Commands::User { action, username } => {
             if let Some(username) = username {
-                cmds::user::handle_user(&cli.target, username, action).await
+                cmds::user::handle_user(&target, &ip, username, action).await
             } else {
                 Err(Error::Operational(str!("Expected --username argument")).into())
             }
@@ -173,12 +184,12 @@ async fn main() -> Result<()> {
         Commands::Upload {
             local_path,
             remote_path,
-        } => cmds::sync::handle_upload(&cli.target, &local_path, &remote_path).await,
+        } => cmds::sync::handle_upload(&target, &ip, &local_path, &remote_path).await,
         Commands::Download {
             remote_path,
             local_path,
-        } => cmds::sync::handle_download(&cli.target, &remote_path, &local_path).await,
-        Commands::Sync { sync_config } => cmds::sync::handle_sync(&cli.target, &sync_config).await,
+        } => cmds::sync::handle_download(&target, &ip, &remote_path, &local_path).await,
+        Commands::Sync { sync_config } => cmds::sync::handle_sync(&target, &ip, &sync_config).await,
     } {
         println!("{} {e}", cmds::err());
     }
