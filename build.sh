@@ -1,168 +1,214 @@
 #!/usr/bin/env bash
 
-set -e
-set -o pipefail
+set -Eeuo pipefail
 
 ###############################################################################
-# Project configuration
+# Configuration
 ###############################################################################
 
-PACKAGE_NAME="infra"
-BINARY_NAME="$PACKAGE_NAME"
-BUILD_ARGS=(
-    "--release"
-    # "--package" "$PACKAGE_NAME"
-    # "--bin" "$PACKAGE_NAME"
-    # "--features" "cli"
-    # "--locked"
-    # "--offline"
-)
-
-# Install prefix (optional)
-INSTALL_PREFIX=""
+INSTALL_DIR="/usr/local/bin"
 
 ###############################################################################
-# Colors
+# Output Style
 ###############################################################################
 
-NC='\033[0m'
-BOLD='\033[1m'
-GREEN='\033[1;32m'
-RED='\033[1;31m'
-BLUE='\033[1;34m'
-GRAY='\033[0;90m'
+NC=$'\033[0m'
+BOLD=$'\033[1m'
 
-###############################################################################
-# Platform detection
-###############################################################################
+CYAN=$'\033[1;36m'
+GREEN=$'\033[1;32m'
+RED=$'\033[1;31m'
+GRAY=$'\033[0;37m'
 
-OS="$(uname -s)"
-
-case "$OS" in
-    Linux)
-        DEFAULT_PREFIX="/opt"
-        BIN_DIR="$HOME/.local/bin"
-        RC_FILE="$HOME/.bashrc"
-        ;;
-
-    Darwin)
-        DEFAULT_PREFIX="/usr/local/lib"
-        BIN_DIR="/usr/local/bin"
-        RC_FILE="$HOME/.zshrc"
-        ;;
-
-    FreeBSD|OpenBSD|NetBSD|DragonFly)
-        DEFAULT_PREFIX="/usr/local/lib"
-        BIN_DIR="/usr/local/bin"
-        RC_FILE="$HOME/.profile"
-        ;;
-
-    *)
-        echo -e "${RED}Unsupported operating system: $OS${NC}"
-        exit 1
-        ;;
-esac
-
-INSTALL_PREFIX="${INSTALL_PREFIX:-$DEFAULT_PREFIX}"
-INSTALL_DIR="$INSTALL_PREFIX/$PACKAGE_NAME"
-
-###############################################################################
-# Helpers
-###############################################################################
-
-echo_log() {
-    echo -e "${BLUE}==>${NC} ${BOLD}$1${NC}"
+section() {
+    printf "\n${CYAN}${BOLD}▶ %s${NC}\n" "$1"
 }
 
-echo_ok() {
-    echo -e " ${GREEN}->${NC} $1"
+info() {
+    printf "  ${GRAY}%-12s${NC} %s\n" "$1" "$2"
 }
 
-echo_err() {
-    echo -e " ${RED}->${NC} ${BOLD}$1${NC}"
+item() {
+    printf "  ${GREEN}✓${NC} %-18s ${GRAY}→${NC} %s\n" "$1" "$2"
 }
 
-pretty_path() {
-    printf '%s' "${1/#$HOME/\~}"
+success() {
+    printf "  ${GREEN}✓${NC} %s\n" "$1"
+}
+
+error() {
+    printf "  ${RED}✗${NC} %s\n" "$1" >&2
+}
+
+die() {
+    error "$1"
+    exit 1
 }
 
 ###############################################################################
 # Requirements
 ###############################################################################
 
-command -v cargo >/dev/null || {
-    err "Rust toolchain not found."
-    echo "Install Rust from https://rustup.rs/"
-    exit 1
-}
+section "Checking requirements"
+
+command -v cargo >/dev/null ||
+    die "cargo is not installed"
+
+command -v jq >/dev/null ||
+    die "jq is not installed"
+
+[[ -f Cargo.toml ]] ||
+    die "Cargo.toml not found"
+
+success "Environment ready"
+
+
+###############################################################################
+# Metadata
+###############################################################################
+
+section "Inspecting project"
+
+METADATA="$(cargo metadata --format-version=1 --no-deps)"
+
+mapfile -t PACKAGES < <(
+    jq -r '
+        .packages[]
+        | select(any(.targets[]; .kind | any(. == "bin")))
+        | .name
+    ' <<< "$METADATA"
+)
+
+[[ ${#PACKAGES[@]} -gt 0 ]] ||
+    die "No binaries found"
+
+
+declare -A BIN_MAP
+
+while IFS=$'\t' read -r package binary; do
+    BIN_MAP["$package"]+="$binary "
+done < <(
+    jq -r '
+        .packages[]
+        |
+        .name as $package
+        |
+        .targets[]
+        |
+        select(.kind | any(. == "bin"))
+        |
+        [$package, .name]
+        |
+        @tsv
+    ' <<< "$METADATA"
+)
+
+
+TOTAL_BINARIES=0
+
+for package in "${PACKAGES[@]}"; do
+    count=$(wc -w <<< "${BIN_MAP[$package]}")
+    TOTAL_BINARIES=$((TOTAL_BINARIES + count))
+done
+
+
+if jq -e '.workspace_members | length > 1' <<< "$METADATA" >/dev/null; then
+    PROJECT_TYPE="Workspace"
+else
+    PROJECT_TYPE="Package"
+fi
+
+
+info "Type" "$PROJECT_TYPE"
+info "Packages" "${#PACKAGES[@]}"
+info "Binaries" "$TOTAL_BINARIES"
+
+printf "\n"
+
+
+for package in "${PACKAGES[@]}"; do
+
+    printf "  ${BOLD}%s${NC}\n" "$package"
+
+    for binary in ${BIN_MAP[$package]}; do
+        printf "    ${GRAY}└─${NC} %s\n" "$binary"
+    done
+
+done
+
 
 ###############################################################################
 # Build
 ###############################################################################
 
-echo_log "Running cargo build..."
+section "Building binaries"
 
-cargo build "${BUILD_ARGS[@]}"
 
-TARGET_DIR="target/debug"
+BUILD_CMD=(
+    cargo
+    build
+    --release
+)
 
-for arg in "${BUILD_ARGS[@]}"; do
-    if [[ "$arg" == "--release" ]]; then
-        TARGET_DIR="target/release"
-        break
-    fi
+
+for package in "${PACKAGES[@]}"; do
+    BUILD_CMD+=(
+        --package
+        "$package"
+    )
 done
 
-SOURCE_BINARY="$TARGET_DIR/$PACKAGE_NAME"
 
-[[ -f "$SOURCE_BINARY" ]] || {
-    err "Compiled binary not found: $SOURCE_BINARY"
-    exit 1
-}
+BUILD_CMD+=("$@")
 
-echo_ok "Compilation successful."
+
+"${BUILD_CMD[@]}"
+
+
+success "Compilation completed"
+
 
 ###############################################################################
 # Install
 ###############################################################################
 
-echo_log "Installing binaries..."
+section "Installing binaries"
 
-mkdir -p "$INSTALL_DIR"
-mkdir -p "$BIN_DIR"
 
-install -m755 "$SOURCE_BINARY" "$INSTALL_DIR/$BINARY_NAME"
-
-ln -sf \
-    "$INSTALL_DIR/$BINARY_NAME" \
-    "$BIN_DIR/$BINARY_NAME"
-
-echo_ok "Binary installed to ${BLUE}$(pretty_path "$INSTALL_DIR")${NC}"
-
-###############################################################################
-# PATH check
-###############################################################################
-
-echo_log "Registering in path..."
-
-if [[ ":$PATH:" != *":$BIN_DIR:"* ]]; then
-
-    echo
-    echo -e "${RED}Warning:${NC} ${BOLD}$(pretty_path "$BIN_DIR")${NC} is not in PATH."
-    echo
-    echo "Add the following line to:"
-    echo "  $RC_FILE"
-    echo
-    echo -e "${GRAY}export PATH=\"${BIN_DIR}:\$PATH\"${NC}"
-    echo
-
+if [[ -w "$INSTALL_DIR" ]]; then
+    INSTALL=(install)
 else
-    echo_ok "Symlink created on ${BLUE}$(pretty_path "$BIN_DIR/$BINARY_NAME")${NC}"
+    INSTALL=(sudo install)
 fi
 
+
+for package in "${PACKAGES[@]}"; do
+
+    for binary in ${BIN_MAP[$package]}; do
+
+        SOURCE="target/release/$binary"
+
+        [[ -f "$SOURCE" ]] ||
+            die "Binary missing: $SOURCE"
+
+
+        "${INSTALL[@]}" \
+            -m755 \
+            "$SOURCE" \
+            "$INSTALL_DIR/$binary"
+
+
+        item "$binary" "$INSTALL_DIR/$binary"
+
+    done
+
+done
+
+
 ###############################################################################
-# Done
+# Completed
 ###############################################################################
 
-echo
-echo -e "${GREEN}${BOLD}Installation complete.${NC}"
+section "Completed"
+
+success "Installation finished"

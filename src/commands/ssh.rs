@@ -1,4 +1,4 @@
-use super::SshConnection;
+use super::{SshConnection, info, section};
 use crate::{TunnelAction, prelude::*};
 
 use std::fs;
@@ -12,34 +12,36 @@ fn get_pid_file(port: u16) -> String {
 
 /// Lists all configured infrastructure hosts from settings
 pub async fn handle_list() -> Result<()> {
-    // load global configurations
     let settings = Settings::get();
-    println!(":: Available hosts from settings.toml:");
 
-    // iterate and display each registered server
+    section("Configured Hosts");
+
+    ("HOST", "USER", "ADDRESS");
+
+    println!("{:<20} {:<16} {}", "HOST", "USER", "ADDRESS");
+
+    println!(
+        "{:<20} {:<16} {}",
+        "--------------------", "----------------", "----------------"
+    );
+
     for (name, host) in &settings.remote.hosts {
-        println!(
-            "  {} {} {}@{}",
-            name.bold(),
-            "->".blue(),
-            host.user_name,
-            host.ip_addr
-        );
+        println!("{:<20} {:<16} {}", name, host.user_name, host.ip_addr);
     }
+
     Ok(())
 }
 
 /// Spawns an interactive ssh terminal session
 pub async fn handle_connect(target: &Option<String>, ip: &Option<String>) -> Result<()> {
-    // resolve ssh connection details for the target host
     let conn = super::get_ssh_conn(target, ip)?;
 
-    println!(
-        ":: Establishing interactive SSH session to {}...",
-        conn.target
-    );
+    section("SSH Connection");
 
-    // execute native ssh passing through configuration arguments
+    info(&format!("Target : {}", conn.target));
+
+    println!();
+
     Command::new("ssh")
         .args(&conn.args)
         .arg(&conn.target)
@@ -56,149 +58,146 @@ pub async fn handle_tunnel(
     action: TunnelAction,
     port: Option<u16>,
 ) -> Result<()> {
-    // resolve ssh connection details for the target host
     let conn = super::get_ssh_conn(target, ip)?;
     let port = port.unwrap_or(1080);
 
     match action {
         TunnelAction::Start { gateway } => handle_tunnel_start(&conn, gateway, port).await?,
+
         TunnelAction::Stop => handle_tunnel_stop(port).await?,
+
         TunnelAction::Restart { gateway } => handle_tunnel_restart(&conn, gateway, port).await?,
+
         TunnelAction::Status => handle_tunnel_status(port).await?,
     }
+
     Ok(())
 }
 
-/// Allocates resources and boots the background monitoring proxy daemon loop
 async fn handle_tunnel_start(conn: &SshConnection, gateway: bool, port: u16) -> Result<()> {
-    println!(":: Starting persistent SOCKS5 SSH tunnel on port {port}...");
+    section("SOCKS5 Tunnel");
+
+    info(&format!("Starting tunnel on port {}", port));
+
     let pid_file = get_pid_file(port);
 
-    // check if a daemon process lockfile already exists
     if Path::new(&pid_file).exists() {
         let pid = fs::read_to_string(&pid_file)?.trim().to_string();
 
-        // verify if the process linked to the pid is actually running
         if Command::new("kill")
             .args(["-0", &pid])
             .status()
             .await?
             .success()
         {
-            return Err(Error::Operational(format!(
-                "Tunnel daemon is already active (PID: {}).",
-                pid
-            ))
-            .into());
+            return Err(
+                Error::Operational(format!("Tunnel already running (PID: {})", pid)).into(),
+            );
         }
     }
 
-    // verify that the local socket port is not allocated by another daemon
     if Command::new("fuser")
-        .args([str!("port/tcp")])
+        .args(["-n", "tcp", &port.to_string()])
         .output()
         .await?
         .status
         .success()
     {
-        return Err(Error::Operational(str!("Port {port} already is busy.")).into());
+        return Err(Error::Operational(format!("Port {} already in use", port)).into());
     }
 
     let gateway_flag = if gateway { "-g " } else { "" };
 
-    // construct a script running inside a clean session group to trap children PIDs
     let daemon_script = format!(
         "setsid nohup bash -c 'while true; do ssh {} -D {port} -C -N {} -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes {}; sleep 1; done' >/dev/null 2>&1 & echo $! > {}",
         conn.args.join(" "),
         gateway_flag,
         conn.target,
-        &pid_file
+        pid_file
     );
 
-    // trigger the background worker script via local bash instance
     Command::new("bash")
         .arg("-c")
         .arg(&daemon_script)
         .status()
         .await?;
 
-    println!(
-        "{} SSH tunnel spawned successfully for: {} {}",
-        super::ok(),
-        conn.target,
-        if gateway {
-            "(Gateway mode enabled)"
-        } else {
-            ""
-        }
-    );
+    info(&format!("Tunnel active: {}", conn.target));
+
+    if gateway {
+        info("Gateway mode: enabled");
+    }
+
     Ok(())
 }
 
-/// Disconnects and terminates running tunnel session groups safely
 async fn handle_tunnel_stop(port: u16) -> Result<()> {
-    println!(":: Disconnecting SOCKS5 tunnel sessions...");
+    section("SOCKS5 Tunnel");
+
+    info(&format!("Stopping tunnel on port {}", port));
+
     let pid_file = get_pid_file(port);
 
-    // process termination layer using pgid to catch orphaned child processes
     if Path::new(&pid_file).exists() {
         let pid = fs::read_to_string(&pid_file)?.trim().to_string();
 
-        // try to kill the process group via pkill using the saved group id
         let _ = Command::new("pkill")
             .args(["-9", "-g", &pid])
-            .output() // swallows stdout/stderr automatically
+            .output()
             .await;
 
-        // fallback: kill the main process directly if group tracking missed it
         let _ = Command::new("kill").args(["-9", &pid]).output().await;
 
         let _ = fs::remove_file(&pid_file);
     }
 
-    // forcibly release any processes binding the forwarding port
     let _ = Command::new("fuser")
         .args(["-k", "-9"])
         .arg(str!("{port}/tcp"))
         .output()
         .await;
 
-    // terminate residual background ssh forwarding sessions matching the pattern
     let _ = Command::new("pkill")
         .args(["-9", "-f"])
         .arg(str!("ssh.*-D {port}"))
         .output()
         .await;
 
-    println!("{} SOCKS5 SSH tunnel closed", super::ok());
+    info("Tunnel stopped");
+
     Ok(())
 }
 
-/// Cycles the active network daemon offline and online
 async fn handle_tunnel_restart(conn: &SshConnection, gateway: bool, port: u16) -> Result<()> {
+    section("SOCKS5 Tunnel");
+
+    info("Restarting tunnel");
+
     handle_tunnel_stop(port).await?;
+
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
 
-    // re-resolve configuration tree mappings for the startup pass
-    handle_tunnel_start(&conn, gateway, port).await?;
+    handle_tunnel_start(conn, gateway, port).await?;
+
     Ok(())
 }
 
-/// Audits current process status matrices for active tunnel allocations
 async fn handle_tunnel_status(port: u16) -> Result<()> {
-    // scan process snapshot tables for alive background forwarding instances
+    section("SOCKS5 Tunnel Status");
+
     let status = Command::new("pgrep")
         .args(["-fl"])
         .arg(str!("ssh.*-D {port}"))
         .output()
         .await?;
 
-    // display operational state back to stdout
     if status.status.success() && !status.stdout.is_empty() {
-        println!(":: Tunnel status: {}", "ACTIVE".green());
+        info("Status : ACTIVE");
+
         std::io::Write::write_all(&mut std::io::stdout(), &status.stdout)?;
     } else {
-        println!(":: Tunnel status: {}", "INACTIVE".red());
+        info("Status : INACTIVE");
     }
+
     Ok(())
 }

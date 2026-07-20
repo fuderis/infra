@@ -1,14 +1,16 @@
+use super::{info, section};
 use crate::prelude::*;
 use tokio::process::Command;
 
 /// Measures round-trip latency using icmp echo requests
 pub async fn handle_ping(target: &Option<String>, ip: &Option<String>, count: usize) -> Result<()> {
-    // resolve network details for the target host
     let host = super::get_remote_host(target, ip)?;
 
-    println!("{} Monitoring ICMP latency to {host}", super::log());
+    section("ICMP Ping");
+    info(&format!("Target : {} ({})", host, host.ip_addr));
 
-    // execute system ping with a fixed count of 10 packets
+    println!();
+
     Command::new("ping")
         .args(["-c", &count.to_string(), &host.ip_addr])
         .status()
@@ -19,20 +21,17 @@ pub async fn handle_ping(target: &Option<String>, ip: &Option<String>, count: us
 
 /// Traces the layer-3 network path to the remote host
 pub async fn handle_trace(target: &Option<String>, ip: &Option<String>) -> Result<()> {
-    // resolve network details for the target host
     let host = super::get_remote_host(target, ip)?;
 
-    println!(
-        "{} Execution of layer-3 route tracking (traceroute) to {host}",
-        super::log()
-    );
+    section("Traceroute");
+    info(&format!("Target : {} ({})", host, host.ip_addr));
 
-    // ensure traceroute binary is available before proceeding
+    println!();
+
     if Command::new("traceroute").arg("-V").output().await.is_err() {
         install_dependency("traceroute").await?;
     }
 
-    // execute path trace to the destination ip
     Command::new("traceroute")
         .arg(&host.ip_addr)
         .status()
@@ -43,64 +42,52 @@ pub async fn handle_trace(target: &Option<String>, ip: &Option<String>) -> Resul
 
 /// Performs continuous network quality analysis using mtr
 pub async fn handle_route(target: &Option<String>, ip: &Option<String>) -> Result<()> {
-    // resolve network details for the target host
     let host = super::get_remote_host(target, ip)?;
 
-    println!(
-        "{} Realtime continuous quality network analysis (MTR) to {host}",
-        super::log()
-    );
+    section("Network Route Quality (MTR)");
+    info(&format!("Target : {} ({})", host, host.ip_addr));
 
-    // ensure mtr binary is available before proceeding
+    println!();
+
     if Command::new("mtr").arg("--version").output().await.is_err() {
         install_dependency("mtr").await?;
     }
 
     let mut mtr_cmd = Command::new("mtr");
 
-    // apply platform-specific flags depending on the target os
     #[cfg(target_os = "linux")]
     {
-        // use report, wide, as-lookup, and 10-cycle count flags for linux
         mtr_cmd.args(["-rwzc", "10", &host.ip_addr]);
     }
 
     #[cfg(target_os = "macos")]
     {
-        // use safe report and 10-cycle count flags for macos to avoid missing libraries
         mtr_cmd.args(["-rc", "10", &host.ip_addr]);
     }
 
-    // execute the diagnostic command
     mtr_cmd.status().await?;
 
     Ok(())
 }
 
-/// Installs a missing system package using the host platform package manager
 async fn install_dependency(package: &str) -> Result<()> {
-    // handle dependency provisioning for linux environments
+    section("Dependency");
+    info(&format!("Missing package: {}", package));
+
     #[cfg(target_os = "linux")]
     {
-        println!(
-            ":: Local dependency '{}' absent. Resolving via pacman...",
-            package
-        );
+        println!("Installing via pacman...");
+
         Command::new("sudo")
             .args(["pacman", "-S", "--noconfirm", package])
             .status()
             .await?;
     }
 
-    // handle dependency provisioning for macos environments
     #[cfg(target_os = "macos")]
     {
-        println!(
-            ":: Local dependency '{}' absent. Resolving via Homebrew...",
-            package
-        );
+        println!("Installing via Homebrew...");
 
-        // ensure homebrew is installed on the host macos system
         if Command::new("brew")
             .arg("--version")
             .output()
@@ -108,11 +95,11 @@ async fn install_dependency(package: &str) -> Result<()> {
             .is_err()
         {
             return Err(Error::Operational(
-                "Homebrew is required to install missing dependencies on macOS. Please install it first.",
-            ).into());
+                "Homebrew is required to install missing dependencies on macOS.",
+            )
+            .into());
         }
 
-        // fetch package through homebrew formulae
         Command::new("brew")
             .args(["install", package])
             .status()

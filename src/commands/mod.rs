@@ -101,15 +101,12 @@ pub fn get_remote_host(
         .ok_or_else(|| Error::UnknownHost(host_name.to_string()).into())
 }
 
-pub fn log() -> ColoredString {
-    "==>".blue()
+fn section(title: &str) {
+    println!();
+    println!("\x1b[1;36m▶ {}\x1b[0m", title);
+    println!();
 }
-pub fn ok() -> ColoredString {
-    " ->".green()
-}
-pub fn err() -> ColoredString {
-    " ->".red()
-}
-pub fn warn() -> ColoredString {
-    " ->".yellow()
+
+fn info(message: &str) {
+    println!("\x1b[1;37m{}\x1b[0m", message);
 }
