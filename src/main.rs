@@ -11,7 +11,7 @@ use clap::{Parser, Subcommand};
 use prelude::*;
 
 pub const APP_NAME: &str = "infra";
-pub const APP_VERSION: &str = "0.3.0";
+pub const APP_VERSION: &str = "0.4.0";
 
 #[derive(Parser, Debug)]
 #[command(
@@ -191,7 +191,7 @@ async fn main() -> Result<()> {
         } => cmds::sync::handle_download(&target, &ip, &remote_path, &local_path).await,
         Commands::Sync { sync_config } => cmds::sync::handle_sync(&target, &ip, &sync_config).await,
     } {
-        println!("{} {e}", "Error:".red());
+        cmds::error(e);
     }
 
     Ok(())

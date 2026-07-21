@@ -10,6 +10,7 @@ pub async fn handle_usage(target: &Option<String>, ip: &Option<String>) -> Resul
 
     section("Resource Usage");
 
+    println!();
     let script = r#"
 echo "LOAD"
 cat /proc/loadavg
@@ -47,8 +48,7 @@ pub async fn handle_setup(target: &Option<String>, ip: &Option<String>) -> Resul
     let conn = super::get_ssh_conn(target, ip)?;
 
     section("Server Setup");
-
-    info("Exporting SSH identity");
+    info("", "Exporting SSH identity");
 
     let mut copy_id_cmd = Command::new("ssh-copy-id");
 
@@ -58,7 +58,7 @@ pub async fn handle_setup(target: &Option<String>, ip: &Option<String>) -> Resul
 
     copy_id_cmd.arg(&conn.target).status().await?;
 
-    info("Starting remote provisioning");
+    info("", "Starting remote provisioning");
 
     let setup_script = r#"
 set -e
@@ -170,7 +170,7 @@ echo "DONE"
         return Err(Error::Operational("Remote setup failed".into()).into());
     }
 
-    info(&format!("Infrastructure deployed: {}", conn.target));
+    info("Deployed", &conn.target);
 
     Ok(())
 }

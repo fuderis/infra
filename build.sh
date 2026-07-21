@@ -15,13 +15,14 @@ INSTALL_DIR="/usr/local/bin"
 NC=$'\033[0m'
 BOLD=$'\033[1m'
 
+BLUE=$'\033[34m'
 CYAN=$'\033[1;36m'
 GREEN=$'\033[1;32m'
 RED=$'\033[1;31m'
 GRAY=$'\033[0;37m'
 
 section() {
-    printf "\n${CYAN}${BOLD}▶ %s${NC}\n" "$1"
+    printf "\n${CYAN}▶${NC} ${BOLD}%s${NC}\n" "$1"
 }
 
 info() {
@@ -29,7 +30,7 @@ info() {
 }
 
 item() {
-    printf "  ${GREEN}✓${NC} %-18s ${GRAY}→${NC} %s\n" "$1" "$2"
+    printf "  ${GREEN}✓${NC} %s ${GRAY}→${NC} %s\n" "$1" "${BLUE}$2${NC}"
 }
 
 success() {
@@ -82,7 +83,6 @@ mapfile -t PACKAGES < <(
 [[ ${#PACKAGES[@]} -gt 0 ]] ||
     die "No binaries found"
 
-
 declare -A BIN_MAP
 
 while IFS=$'\t' read -r package binary; do
@@ -103,7 +103,6 @@ done < <(
     ' <<< "$METADATA"
 )
 
-
 TOTAL_BINARIES=0
 
 for package in "${PACKAGES[@]}"; do
@@ -111,20 +110,17 @@ for package in "${PACKAGES[@]}"; do
     TOTAL_BINARIES=$((TOTAL_BINARIES + count))
 done
 
-
 if jq -e '.workspace_members | length > 1' <<< "$METADATA" >/dev/null; then
     PROJECT_TYPE="Workspace"
 else
     PROJECT_TYPE="Package"
 fi
 
-
 info "Type" "$PROJECT_TYPE"
 info "Packages" "${#PACKAGES[@]}"
 info "Binaries" "$TOTAL_BINARIES"
 
 printf "\n"
-
 
 for package in "${PACKAGES[@]}"; do
 
@@ -143,13 +139,11 @@ done
 
 section "Building binaries"
 
-
 BUILD_CMD=(
     cargo
     build
     --release
 )
-
 
 for package in "${PACKAGES[@]}"; do
     BUILD_CMD+=(
@@ -158,12 +152,8 @@ for package in "${PACKAGES[@]}"; do
     )
 done
 
-
 BUILD_CMD+=("$@")
-
-
 "${BUILD_CMD[@]}"
-
 
 success "Compilation completed"
 
@@ -174,16 +164,13 @@ success "Compilation completed"
 
 section "Installing binaries"
 
-
 if [[ -w "$INSTALL_DIR" ]]; then
     INSTALL=(install)
 else
     INSTALL=(sudo install)
 fi
 
-
 for package in "${PACKAGES[@]}"; do
-
     for binary in ${BIN_MAP[$package]}; do
 
         SOURCE="target/release/$binary"
@@ -199,9 +186,7 @@ for package in "${PACKAGES[@]}"; do
 
 
         item "$binary" "$INSTALL_DIR/$binary"
-
     done
-
 done
 
 
@@ -210,5 +195,4 @@ done
 ###############################################################################
 
 section "Completed"
-
 success "Installation finished"

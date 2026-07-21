@@ -1,4 +1,4 @@
-use super::{info, section};
+use super::{info, section, success};
 use crate::prelude::*;
 use std::path::PathBuf;
 use tokio::process::Command;
@@ -21,11 +21,11 @@ pub async fn handle_upload(
     }
 
     section("File Upload");
-    info(&format!("Source      : {}", local_path.display()));
-    info(&format!("Destination : {}:{}", conn.target, remote_path));
+    info("Source     ", &local_path.to_string_lossy());
+    info("Destination", &format!("{}:{}", conn.target, remote_path));
 
+    println!();
     let mut rsync_cmd = Command::new("rsync");
-
     rsync_cmd.arg("-azh").arg("--info=progress2");
 
     if !conn.args.is_empty() {
@@ -46,7 +46,8 @@ pub async fn handle_upload(
         return Err(Error::Operational(format!("Upload failed: {}", conn.target)).into());
     }
 
-    info("Upload completed");
+    println!();
+    success("Upload completed");
 
     Ok(())
 }
@@ -69,10 +70,8 @@ pub async fn handle_download(
     }
 
     section("File Download");
-
-    info(&format!("Source      : {}:{}", conn.target, remote_path));
-
-    info(&format!("Destination : {}", local_path.display()));
+    info("Source     ", &format!("{}:{}", conn.target, remote_path));
+    info("Destination", &local_path.to_string_lossy());
 
     let mut rsync_cmd = Command::new("rsync");
 
@@ -96,7 +95,8 @@ pub async fn handle_download(
         return Err(Error::Operational(format!("Download failed: {}", conn.target)).into());
     }
 
-    info("Download completed");
+    println!();
+    success("Download completed");
 
     Ok(())
 }
@@ -116,8 +116,7 @@ pub async fn handle_sync(
         .ok_or_else(|| Error::Operational("Cannot resolve HOME directory".into()))?;
 
     section("Configuration Sync");
-
-    info(&format!("Profile : {}", sync_config));
+    info("Profile", &sync_config);
 
     let files_to_sync: Vec<PathBuf> = if sync_config == "@" {
         let mut files = Vec::new();
@@ -127,8 +126,7 @@ pub async fn handle_sync(
         }
 
         if files.is_empty() {
-            info("No files configured");
-
+            info("", "No files configured");
             return Ok(());
         }
 
@@ -145,7 +143,7 @@ pub async fn handle_sync(
         }
     };
 
-    info(&format!("Files : {}", files_to_sync.len()));
+    info("Files", &files_to_sync.len().to_string());
 
     let mut mkdir_dirs = Vec::new();
 
@@ -189,8 +187,6 @@ pub async fn handle_sync(
 
         handle_upload(target, ip, &local_path, &remote_path).await?;
     }
-
-    info("Synchronization completed");
 
     Ok(())
 }

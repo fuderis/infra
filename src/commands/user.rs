@@ -1,4 +1,4 @@
-use super::{SshConnection, info, section};
+use super::{SshConnection, info, section, success};
 use crate::{UserAction, UserKeyOp, prelude::*};
 use std::fs;
 use tokio::process::Command;
@@ -27,7 +27,7 @@ pub async fn handle_user(
 /// Creates a new unprivileged system user with an initialized ssh directory
 async fn handle_new(conn: &SshConnection, username: String) -> Result<()> {
     section("Create User");
-    info(&format!("User : {}", username));
+    info("User", &username);
 
     let script = format!(
         r#"
@@ -51,7 +51,8 @@ sudo chmod 700 /home/{0}/.ssh
         .status()
         .await?;
 
-    info("User created");
+    println!();
+    success("User created");
 
     Ok(())
 }
@@ -59,7 +60,7 @@ sudo chmod 700 /home/{0}/.ssh
 /// Appends the targeted user account to the secondary administrative sudo group
 async fn handle_grant_sudo(conn: &SshConnection, username: String) -> Result<()> {
     section("Grant Sudo");
-    info(&format!("User : {}", username));
+    info("User", &username);
 
     let script = format!(
         r#"
@@ -80,7 +81,8 @@ sudo usermod -aG sudo {0}
         .await?;
 
     if status.success() {
-        info("Sudo privileges granted");
+        println!();
+        success("Sudo privileges granted");
         Ok(())
     } else {
         Err(Error::Operational("Failed to grant sudo privileges".into()).into())
@@ -90,8 +92,7 @@ sudo usermod -aG sudo {0}
 /// Removes the targeted user account from the secondary administrative sudo group
 async fn handle_revoke_sudo(conn: &SshConnection, username: String) -> Result<()> {
     section("Revoke Sudo");
-
-    info(&format!("User : {}", username));
+    info("User", &username);
 
     let script = format!(
         r#"
@@ -112,7 +113,7 @@ sudo deluser {0} sudo
         .await?;
 
     if status.success() {
-        info("Sudo privileges revoked");
+        success("Sudo privileges revoked");
 
         Ok(())
     } else {
@@ -154,6 +155,7 @@ fi
 
     let stdout = String::from_utf8_lossy(&output.stdout);
 
+    println!();
     println!("{:<12} {:<40}", "FIELD", "VALUE");
     println!(
         "{:<12} {:<40}",
@@ -172,7 +174,7 @@ fi
 /// Destroys a user identity along with all attached files and home folders
 async fn handle_remove(conn: &SshConnection, username: String) -> Result<()> {
     section("Remove User");
-    info(&format!("Removing : {}", username));
+    info("Removing", &username);
 
     let script = format!("sudo deluser --remove-home {}", username);
 
@@ -182,7 +184,7 @@ async fn handle_remove(conn: &SshConnection, username: String) -> Result<()> {
         .status()
         .await?;
 
-    info("User removed");
+    info("", "User removed");
 
     Ok(())
 }
@@ -204,10 +206,8 @@ async fn handle_key_operations(
 /// Manually appends a structured public signature string to authorized keys
 async fn handle_key_add(conn: &SshConnection, username: String, pubkey: String) -> Result<()> {
     section("SSH Key");
-
-    info(&format!("Action : Add public key"));
-
-    info(&format!("User   : {}", username));
+    info("Action", "Add public key");
+    info("User  ", &username);
 
     let script = format!(
         r#"
@@ -229,7 +229,7 @@ sudo chmod 600 /home/{0}/.ssh/authorized_keys
         .status()
         .await?;
 
-    info("Public key added");
+    info("", "Public key added");
 
     Ok(())
 }
@@ -237,10 +237,8 @@ sudo chmod 600 /home/{0}/.ssh/authorized_keys
 /// Flushes the verification database file by truncating all payload contents
 async fn handle_key_clear(conn: &SshConnection, username: String) -> Result<()> {
     section("SSH Key");
-
-    info("Action : Clear authorized keys");
-
-    info(&format!("User   : {}", username));
+    info("Action", "Clear authorized keys");
+    info("User  ", &username);
 
     let script = format!(
         r#"
@@ -257,7 +255,7 @@ fi
         .status()
         .await?;
 
-    info("Authorized keys cleared");
+    info("", "Authorized keys cleared");
 
     Ok(())
 }
@@ -282,9 +280,8 @@ async fn handle_key_gen(
         }
     };
 
-    info(&format!("User   : {}", username));
-
-    info(&format!("Output : {}", target_key_path.display()));
+    info("User  ", &username);
+    info("Output", &target_key_path.to_string_lossy());
 
     if target_key_path.exists() {
         return Err(Error::Operational(format!(
@@ -320,7 +317,7 @@ async fn handle_key_gen(
 
     fs::remove_dir_all(&tmp_dir)?;
 
-    info("Uploading public key");
+    info("", "Uploading public key");
 
     let script = format!(
         r#"
@@ -351,7 +348,8 @@ sudo chmod 600 /home/{0}/.ssh/authorized_keys
             .status()
             .await?;
 
-        info("SSH key generated");
+        println!();
+        success("SSH key generated");
 
         Ok(())
     } else {

@@ -1,4 +1,5 @@
 use crate::prelude::*;
+
 use tokio::process::Command;
 
 /// Inspects security state, firewall rules and SSH activity on the remote server.

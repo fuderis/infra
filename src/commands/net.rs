@@ -7,7 +7,7 @@ pub async fn handle_ping(target: &Option<String>, ip: &Option<String>, count: us
     let host = super::get_remote_host(target, ip)?;
 
     section("ICMP Ping");
-    info(&format!("Target : {} ({})", host, host.ip_addr));
+    info("Target", &format!("{} ({})", host, host.ip_addr));
 
     println!();
 
@@ -24,7 +24,7 @@ pub async fn handle_trace(target: &Option<String>, ip: &Option<String>) -> Resul
     let host = super::get_remote_host(target, ip)?;
 
     section("Traceroute");
-    info(&format!("Target : {} ({})", host, host.ip_addr));
+    info("Target", &format!("{} ({})", host, host.ip_addr));
 
     println!();
 
@@ -45,7 +45,7 @@ pub async fn handle_route(target: &Option<String>, ip: &Option<String>) -> Resul
     let host = super::get_remote_host(target, ip)?;
 
     section("Network Route Quality (MTR)");
-    info(&format!("Target : {} ({})", host, host.ip_addr));
+    info("Target", &format!("{} ({})", host, host.ip_addr));
 
     println!();
 
@@ -72,7 +72,7 @@ pub async fn handle_route(target: &Option<String>, ip: &Option<String>) -> Resul
 
 async fn install_dependency(package: &str) -> Result<()> {
     section("Dependency");
-    info(&format!("Missing package: {}", package));
+    info("Missing package", package);
 
     #[cfg(target_os = "linux")]
     {

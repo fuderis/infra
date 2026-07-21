@@ -66,32 +66,30 @@ pub fn get_remote_host(
 ) -> Result<RemoteHost> {
     let cfg = Settings::get();
 
-    // 1. Если передан явный IP через --ip
+    // 1. If an explicit IP is passed via --ip
     if let Some(ip) = explicit_ip {
-        // Ищем в конфиге хост, у которого такой же IP (чтобы подтянуть его юзера и ключ, если он там есть)
+        // looking for a host in the config that has the same IP (to pull up its user and key, if it is there)
         if let Some(found_host) = cfg.remote.hosts.values().find(|h| &h.ip_addr == ip) {
             return Ok(found_host.clone());
         }
 
-        // Если с таким IP в конфиге ничего нет, берем дефолтного хоста как шаблон
-        // (чтобы скопировать дефолтного user_name и ssh_file), но меняем IP на указанный
+        // if there is nothing with such an IP in the configuration, we take the default host as a template.
+        // (to copy the default user_name and ssh_file), but change the IP to the specified one
         if let Some(default_host) = cfg.remote.hosts.get(&cfg.remote.default) {
             let mut host = default_host.clone();
             host.ip_addr = ip.clone(); // Подменяем IP на лету
             return Ok(host);
         }
 
-        // Если даже дефолтного хоста нет в конфиге, собираем минимальный RemoteHost
-        // (подставьте ваши реальные поля структуры RemoteHost)
+        // even if there is no default host in the config, we build a minimal RemoteHost.
         return Ok(RemoteHost {
             ip_addr: ip.clone(),
-            user_name: "root".to_string(), // или другое значение по умолчанию
+            user_name: "root".to_string(),
             ssh_file: None,
-            // другие поля, если они есть...
         });
     }
 
-    // 2. Если --ip не указан, работаем по старой логике (ищем по имени хоста)
+    // 2. If --ip is not specified, we work according to the old logic (we search by host name)
     let host_name = target.as_deref().unwrap_or(&cfg.remote.default);
 
     cfg.remote
@@ -101,12 +99,33 @@ pub fn get_remote_host(
         .ok_or_else(|| Error::UnknownHost(host_name.to_string()).into())
 }
 
-fn section(title: &str) {
+pub fn section(title: &str) {
     println!();
-    println!("\x1b[1;36m▶ {}\x1b[0m", title);
-    println!();
+    println!("{} {}", "▶".cyan().bold(), title.bold());
 }
 
-fn info(message: &str) {
-    println!("\x1b[1;37m{}\x1b[0m", message);
+pub fn info(label: &str, message: &str) {
+    if !label.is_empty() {
+        println!(
+            "  {} {}{} {}",
+            "•".cyan(),
+            label.bold(),
+            ":".bold(),
+            message
+        );
+    } else {
+        println!("  {} {}", "•".cyan(), message);
+    }
+}
+
+pub fn success(message: &str) {
+    println!("  {} {}", "✓".green(), message);
+}
+
+pub fn error(e: crate::DynError) {
+    if let Some((prefix, tail)) = crate::str!(e).split_once(": ") {
+        println!("\n  {} {}{} {tail}", "✗".red(), prefix.red(), ":".red());
+    } else {
+        println!("\n  {} {e}", "✗".red());
+    }
 }
